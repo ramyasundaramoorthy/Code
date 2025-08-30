@@ -1,0 +1,29 @@
+import tensorflow as tf
+from tensorflow.keras import layers
+from kerastuner.tuners import RandomSearch
+
+def build_model(hp):
+    model = tf.keras.Sequential()
+    model.add(layers.Flatten(input_shape=(28, 28)))
+    model.add(layers.Dense(hp.Int('units', min_value=32, max_value=128, step=32),
+                           activation='relu'))
+    model.add(layers.Dense(10, activation='softmax'))
+    model.compile(optimizer='adam',
+                  loss='sparse_categorical_crossentropy',
+                  metrics=['accuracy'])
+    return model
+
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+
+tuner = RandomSearch(
+    build_model,
+    objective='val_accuracy',
+    max_trials=3,
+    directory='tuner_dir',
+    project_name='mnist_nas')
+
+tuner.search(x_train, y_train, epochs=3, validation_split=0.2)
+best_model = tuner.get_best_models(1)[0]
+best_model.evaluate(x_test, y_test)
+
+
